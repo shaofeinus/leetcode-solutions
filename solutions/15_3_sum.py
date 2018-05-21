@@ -5,6 +5,68 @@ class Solution:
         :rtype: List[List[int]]
         """
 
+        def get_repeated_nums(nums):
+            repeated_set = set()
+            prev = nums[0]
+            for curr in nums[1:]:
+                if curr == prev:
+                    repeated_set.add(curr)
+                prev = curr
+            return repeated_set
+
+        def add_sums_of_unique_nums(unique_nums, sums):
+            for i in range(len(unique_nums) - 1):
+                for j in range(i + 1, len(unique_nums)):
+                    n_1, n_2 = unique_nums[i], unique_nums[j]
+                    added = n_1 + n_2
+                    if sums.get(added) is None:
+                        sums[added] = [(n_1, n_2)]
+                    else:
+                        sums[added].append((n_1, n_2))
+
+        def add_sums_of_repeated_nums(repeated_nums, sums):
+            for n in repeated_nums:
+                added = n * 2
+                if sums.get(added) is None:
+                    sums[added] = [(n, n)]
+                else:
+                    sums[added].append((n, n))
+
+        def search(unique_nums, counter_nums, triplets):
+            if len(counter_nums) < 2:
+                # Less then 2 counter nums, impossible to form 3 numbers
+                return
+            unique_counter_nums = list(set(counter_nums))
+            repeated_counter_nums = list(get_repeated_nums(counter_nums))
+            sums = {}
+            add_sums_of_unique_nums(unique_counter_nums, sums)
+            add_sums_of_repeated_nums(repeated_counter_nums, sums)
+            for unique_num in unique_nums:
+                pairs = sums.get(-unique_num)
+                if pairs is not None:
+                    triplets.extend([(unique_num, pair[0], pair[1]) for pair in pairs])
+
+        def get_unique_triplets(triplets):
+            triplets_dict = {}
+            unique_triples = list()
+            for triplet in triplets:
+                n_1, n_2, n_3 = triplet[0], triplet[1], triplet[2]
+                if triplets_dict.get(n_1, {}).get(n_2, {}).get(n_3) is None \
+                        and triplets_dict.get(n_1, {}).get(n_3, {}).get(n_2) is None \
+                        and triplets_dict.get(n_2, {}).get(n_1, {}).get(n_3) is None \
+                        and triplets_dict.get(n_2, {}).get(n_3, {}).get(n_1) is None \
+                        and triplets_dict.get(n_3, {}).get(n_1, {}).get(n_2) is None \
+                        and triplets_dict.get(n_3, {}).get(n_2, {}).get(n_1) is None:
+                    # Unique triplet
+                    unique_triples.append((n_1, n_2, n_3))
+                    if triplets_dict.get(n_1) is None:
+                        triplets_dict[n_1] = {n_2: {n_3: True}}
+                    elif triplets_dict[n_1].get(n_2) is None:
+                        triplets_dict[n_1][n_2] = {n_3: True}
+                    else:
+                        triplets_dict[n_1][n_2][n_3] = True
+            return unique_triples
+
         positives = []
         negatives = []
         zeros = []
@@ -22,80 +84,17 @@ class Solution:
             positives.append(0)
             negatives.append(0)
 
-        result = {}
+        result = []
         # Put 3 zeros first
         if len(zeros) >= 3:
-            self.put_in_result(0, 0, 0, result)
+            result.append((0, 0, 0))
 
         # 1 positive, 2 negative
-        self.search(positives, negatives, result, -1)
+        search(list(set(positives)), negatives, result)
         # 1 negative, 2 positives
-        self.search(negatives, positives, result, 1)
+        search(list(set(negatives)), positives, result)
 
-        real_result = list()
-        for n_1 in result.keys():
-            for n_2 in result[n_1].keys():
-                real_result.append((n_1, n_2, result[n_1][n_2]))
-
-        return real_result
-
-    def search(self, nums, counter_nums, result, counter_num_sign):
-        if len(counter_nums) < 2:
-            # If only 1 counter num, impossible to form 3 numbers
-            return
-
-        num_tried = set()
-
-        i_1, i_2 = 0, 1
-        prev_1, prev_2 = counter_nums[i_1] + counter_num_sign, counter_nums[i_2] + counter_num_sign
-        i_limit = len(counter_nums)
-        for num in nums:
-            if num == 0:
-                break
-            if num in num_tried:
-                continue
-            while i_2 < i_limit:
-                curr_1, curr_2 = counter_nums[i_1], counter_nums[i_2]
-                if curr_1 == prev_1 and curr_2 == prev_2:
-                    # Repeat pair, try next pair
-                    i_1, i_2 = self.next_i(i_1, i_2, i_limit)
-                    continue
-                state = num + curr_1 + curr_2
-                if state == 0:
-                    self.put_in_result(num, curr_1, curr_2, result)
-                    i_1, i_2 = self.next_i(i_1, i_2, i_limit)
-                    prev_1, prev_2 = curr_1, curr_2
-                elif (num > 0 > state) or (num < 0 < state):
-                    # Sum of counter numbers over compensate number. Try smaller counter numbers
-                    i_1, i_2 = self.next_i(i_1, i_2, i_limit)
-                    prev_1, prev_2 = curr_1, curr_2
-                elif (num > 0 and state > 0) or (num < 0 and state < 0):
-                    # The largest counter number cannot make number change sign. Try smaller number
-                    break
-            num_tried.add(num)
-
-    def next_i(self, i_1, i_2, i_limit):
-        if i_2 + 1 == i_limit:
-            return i_1 + 1, i_1 + 2
-        else:
-            return i_1, i_2 + 1
-
-    def put_in_result(self, num_1, num_2, num_3, result):
-
-        def is_in_result(n_1, n_2, n_3):
-            return n_1 in result and n_2 in result[n_1] and result[n_1][n_2] == n_3
-
-        if is_in_result(num_1, num_2, num_3) or \
-                is_in_result(num_1, num_3, num_2) or \
-                is_in_result(num_2, num_1, num_3) or \
-                is_in_result(num_2, num_3, num_1) or \
-                is_in_result(num_3, num_1, num_2) or \
-                is_in_result(num_3, num_2, num_1):
-            return
-
-        inner = result.get(num_1, {})
-        inner[num_2] = num_3
-        result[num_1] = inner
+        return get_unique_triplets(result)
 
 
 print(Solution().threeSum([-4, -2, -2, -2, 0, 1, 2, 2, 2, 3, 3, 4, 4, 6, 6]))
